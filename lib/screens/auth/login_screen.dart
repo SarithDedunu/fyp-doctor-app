@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
-import '../dashboard/dashboard_screen.dart';
+import 'package:doctor_app/services/auth_service.dart';
+import 'package:doctor_app/screens/dashboard/dashboard_screen.dart';
+import 'registration_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final AuthService _authService = AuthService();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -70,39 +83,62 @@ class LoginScreen extends StatelessWidget {
   Widget _buildLoginForm(BuildContext context) {
     return Column(
       children: [
-        TextField(
-          decoration: InputDecoration(
+        // Email Field
+        TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
             labelText: 'Email',
-            prefixIcon: Icon(Icons.email, color: Colors.teal[700]),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.teal[700]!),
-            ),
+            prefixIcon: Icon(Icons.email, color: Colors.teal),
+            border: OutlineInputBorder(),
+            hintText: 'Enter your registered email',
           ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your email';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 20),
-        TextField(
-          obscureText: true,
+
+        // Password Field
+        TextFormField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: Icon(Icons.lock, color: Colors.teal[700]),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.teal[700]!),
+            prefixIcon: const Icon(Icons.lock, color: Colors.teal),
+            border: const OutlineInputBorder(),
+            hintText: 'Enter your password',
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                color: Colors.grey,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
             ),
           ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your password';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 16),
+
+        // Forgot Password
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () {},
+            onPressed: () {
+              _showForgotPasswordDialog(context);
+            },
             child: Text(
               'Forgot Password?',
               style: TextStyle(color: Colors.teal[700]),
@@ -110,16 +146,13 @@ class LoginScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+
+        // Login Button
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const DashboardScreen()),
-              );
-            },
+            onPressed: _isLoading ? null : _signInWithEmail,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal[700],
               foregroundColor: Colors.white,
@@ -128,64 +161,15 @@ class LoginScreen extends StatelessWidget {
               ),
               elevation: 2,
             ),
-            child: const Text(
-              'Sign In',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        
-        // Divider
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey[300])),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Or continue with',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-            Expanded(child: Divider(color: Colors.grey[300])),
-          ],
-        ),
-        const SizedBox(height: 24),
-        
-        // Google Sign In
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: OutlinedButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const DashboardScreen()),
-              );
-            },
-            style: OutlinedButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.g_mobiledata, size: 24, color: Colors.red),
-                const SizedBox(width: 12),
-                const Text(
-                  'Continue with Google',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -194,20 +178,27 @@ class LoginScreen extends StatelessWidget {
 
   Widget _buildSignUpLink(BuildContext context) {
     return Center(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
         children: [
           Text(
-            "Don't have an account? ",
-            style: TextStyle(color: Colors.grey[600]),
+            "Don't have an account?",
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
           ),
+          const SizedBox(height: 8),
           GestureDetector(
             onTap: () {
-              // TODO: Navigate to sign up screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const RegistrationScreen()),
+              );
             },
             child: Text(
-              'Sign Up',
+              'Register as a Doctor',
               style: TextStyle(
+                fontSize: 16,
                 color: Colors.teal[700],
                 fontWeight: FontWeight.w600,
               ),
@@ -215,6 +206,85 @@ class LoginScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter both email and password'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _authService.loginDoctor(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Forgot Password'),
+          content: const Text(
+            'Please contact the admin to reset your password. '
+            'This ensures the security of patient data.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
