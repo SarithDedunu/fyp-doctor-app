@@ -5,15 +5,14 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   supabase_flutter: ^2.1.2
-  image_picker: ^1.0.4  # For document uploads
-  file_picker: ^5.5.0   # For file selection
   cupertino_icons: ^1.0.8
+  image_picker: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -25,5 +24,3 @@ flutter:
 
   assets:
     - assets/onboarding/
-    - assets/images/
-    - assets/icons/

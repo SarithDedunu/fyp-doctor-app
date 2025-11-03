@@ -150,53 +150,48 @@ class AuthService {
     }
   }
 
-  // Login for approved doctors only
+  // Login for doctors only
   Future<Map<String, dynamic>> loginDoctor({
     required String email,
     required String password,
   }) async {
     try {
-      // First check if doctor is approved
-      final isApproved = await isDoctorApproved(email);
-      if (!isApproved) {
-        // Check if registration is pending
-        final status = await checkRegistrationStatus(email);
-        if (status['exists'] == true && status['status'] == 'pending') {
-          return {
-            'success': false,
-            'message': 'Your registration is pending admin approval. Please wait for approval email.',
-          };
-        } else if (status['exists'] == true && status['status'] == 'rejected') {
-          return {
-            'success': false,
-            'message': 'Your registration was rejected. Reason: ${status['rejection_reason'] ?? "No reason provided"}',
-          };
-        } else {
-          return {
-            'success': false,
-            'message': 'No approved registration found. Please register first.',
-          };
-        }
-      }
-
-      // If approved, proceed with authentication
+      // First, authenticate the user
       final authResponse = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (authResponse.user != null) {
-        return {
-          'success': true,
-          'message': 'Login successful',
-          'user': authResponse.user,
-        };
-      } else {
+      if (authResponse.user == null) {
         return {
           'success': false,
           'message': 'Invalid email or password',
         };
       }
+
+      // If authenticated, check user role from user_roles table
+      final userId = authResponse.user!.id;
+      final roleResponse = await _supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (roleResponse == null || roleResponse['role'] != 'doctor') {
+        // Sign out if not a doctor
+        await _supabase.auth.signOut();
+        return {
+          'success': false,
+          'message': 'Access denied: You are not authorized as a doctor.',
+        };
+      }
+
+      // If role is doctor, allow login
+      return {
+        'success': true,
+        'message': 'Login successful',
+        'user': authResponse.user,
+      };
     } catch (e) {
       print('Login error: $e');
       return {

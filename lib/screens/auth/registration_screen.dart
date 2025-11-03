@@ -1,8 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:doctor_app/services/auth_service.dart';
 import 'package:doctor_app/services/storage_service.dart';
-import 'dart:io';
+// ignore: depend_on_referenced_packages
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
