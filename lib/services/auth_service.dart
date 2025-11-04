@@ -41,20 +41,6 @@ class AuthService {
         };
       }
 
-      // Check if email already exists in approved doctors
-      final existingDoctor = await _supabase
-          .from('doctor_profiles')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
-
-      if (existingDoctor != null) {
-        print('❌ Email already exists in approved doctors');
-        return {
-          'success': false,
-          'message': 'Email already registered. Please login instead.',
-        };
-      }
 
       // Prepare data for insertion
       final registrationData = {
@@ -101,22 +87,6 @@ class AuthService {
     }
   }
 
-  // Check if user is approved doctor
-  Future<bool> isDoctorApproved(String email) async {
-    try {
-      final response = await _supabase
-          .from('doctor_profiles')
-          .select('id, is_approved')
-          .eq('email', email)
-          .eq('is_approved', true)
-          .maybeSingle();
-
-      return response != null;
-    } catch (e) {
-      print('Error checking doctor approval: $e');
-      return false;
-    }
-  }
 
   // Check registration status
   Future<Map<String, dynamic>> checkRegistrationStatus(String email) async {
